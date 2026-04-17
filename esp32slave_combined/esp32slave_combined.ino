@@ -23,6 +23,10 @@
 //  [0]    speed  INT16    pulses / second
 //  [1–2]  vmot   FLOAT32  motor volts  (low word first)
 //  [3–4]  vgen   FLOAT32  motor volts  (low word first)
+//  [5–6]  rpm    FLOAT32  revolutions / minute  (low word first)
+//
+//  Encoder: 20 pulses / revolution
+//  RPM = speed_Hz × 60 / 20
 // ════════════════════════════════════════════════════════════════════
 
 #include <Arduino.h>
@@ -47,16 +51,20 @@ constexpr float   MIN_SENSOR_V = 1.45f;
 constexpr float   MOTOR_V_MAX  = 12.0f;
 constexpr uint8_t MA_WINDOW    = 8;
 
+// ── Encoder ───────────────────────────────────────────────────────────────────
+constexpr uint8_t PULSES_PER_REV = 20;  // encoder resolution
+
 // ── Modbus ────────────────────────────────────────────────────────────────────
 HardwareSerial RS485Serial(1);
 ModbusRTUSlave modbus(RS485Serial);
-uint16_t       holdingRegisters[5];  // [0]=speed, [1-2]=vmot, [3-4]=vgen
+uint16_t       holdingRegisters[7];  // [0]=speed, [1-2]=vmot, [3-4]=vgen, [5-6]=rpm
 
 // ── Shared measurement state — written by timer task, read by loop() ──────────
 static portMUX_TYPE g_mux    = portMUX_INITIALIZER_UNLOCKED;
 volatile float   g_vmot      = 0.0f;
 volatile float   g_vgen      = 0.0f;
-volatile int16_t g_speed     = 0;
+volatile int16_t g_speed     = 0;     // pulses / second
+volatile float   g_rpm       = 0.0f; // revolutions / minute
 volatile bool    g_newSample = false;
 
 // ── Pulse counter — written by GPIO ISR, consumed by timer task ───────────────
@@ -139,10 +147,14 @@ static void onSampleTimer(void* /*arg*/) {
   const float   vgenAvg  = vgenSum  / filled;
   const int16_t speedAvg = static_cast<int16_t>(speedSum / filled);
 
+  // RPM from smoothed speed — encoder has 20 pulses per revolution
+  const float rpmAvg = static_cast<float>(speedAvg) * 60.0f / PULSES_PER_REV;
+
   portENTER_CRITICAL(&g_mux);
   g_vmot      = vmotAvg;
   g_vgen      = vgenAvg;
   g_speed     = speedAvg;
+  g_rpm       = rpmAvg;
   g_newSample = true;
   portEXIT_CRITICAL(&g_mux);
 }
@@ -174,10 +186,10 @@ void setup() {
   // ── RS-485 Modbus RTU slave — address 1, 9600 baud, 8-N-1 ───────────────
   RS485Serial.begin(9600, SERIAL_8N1, RS485_RX, RS485_TX);
   modbus.begin(1, 9600);
-  modbus.configureHoldingRegisters(holdingRegisters, 5);
+  modbus.configureHoldingRegisters(holdingRegisters, 7);
 
   Serial.println("ESP32-C6 Modbus slave ready — address 1, 9600 baud");
-  Serial.println("speed (pulse/s) | vmot (V) | vgen (V)");
+  Serial.println("speed (pulse/s) | rpm (RPM) | vmot (V) | vgen (V)");
 }
 
 void loop() {
@@ -189,17 +201,19 @@ void loop() {
 
   // ── Thread-safe snapshot of latest measurements ───────────────────────────
   int16_t speed;
-  float   vmot, vgen;
+  float   vmot, vgen, rpm;
   portENTER_CRITICAL(&g_mux);
   speed = g_speed;
   vmot  = g_vmot;
   vgen  = g_vgen;
+  rpm   = g_rpm;
   portEXIT_CRITICAL(&g_mux);
 
   // ── Pack into Modbus holding registers ───────────────────────────────────
   holdingRegisters[0] = static_cast<uint16_t>(speed);
   memcpy(&holdingRegisters[1], &vmot, sizeof(vmot));  // vmot → reg 1–2
   memcpy(&holdingRegisters[3], &vgen, sizeof(vgen));  // vgen → reg 3–4
+  memcpy(&holdingRegisters[5], &rpm,  sizeof(rpm));   // rpm  → reg 5–6
 
   // ── Serve any incoming Modbus request ─────────────────────────────────────
   modbus.poll();
@@ -207,6 +221,7 @@ void loop() {
   // ── Serial debug — printed once per 10 ms tick (100 Hz) ──────────────────
   if (newData) {
     Serial.print(speed);    Serial.print(" pulse/s | ");
+    Serial.print(rpm, 1);   Serial.print(" RPM | ");
     Serial.print(vmot, 3);  Serial.print(" V | ");
     Serial.print(vgen, 3);  Serial.println(" V");
   }

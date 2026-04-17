@@ -44,6 +44,10 @@ Both channels use 11 dB ADC attenuation to cover the full 0–3.9 V input range.
 | 0       | speed  | INT16 — pulses/second                 |
 | 1–2     | vmot   | FLOAT32 (two 16-bit words, low first) |
 | 3–4     | vgen   | FLOAT32 (two 16-bit words, low first) |
+| 5–6     | rpm    | FLOAT32 (two 16-bit words, low first) |
+
+> **RPM calculation:** encoder has 20 pulses/revolution.
+> `RPM = speed_Hz × 60 / 20` applied to the 8-sample moving-average speed.
 
 ## Arduino Sketches
 

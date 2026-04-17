@@ -10,7 +10,7 @@
 //    3.80 V → +12 V motor voltage
 //
 //  Speed unit: pulses/second (Hz)
-//  Convert to RPM: RPM = speed_Hz * 60 / pulses_per_revolution
+//  Encoder: 20 pulses/revolution → RPM = speed_Hz * 60 / 20
 // ════════════════════════════════════════════════════════════════════
 
 #include <Arduino.h>
@@ -31,11 +31,15 @@ constexpr float   MIN_SENSOR_V = 1.45f;
 constexpr float   MOTOR_V_MAX  = 12.0f;
 constexpr uint8_t MA_WINDOW    = 8;
 
+// ── Encoder ───────────────────────────────────────────────────────────────────
+constexpr uint8_t PULSES_PER_REV = 20;  // encoder resolution
+
 // ── Shared measurement state — written by timer task, read by loop() ──────────
 static portMUX_TYPE g_mux      = portMUX_INITIALIZER_UNLOCKED;
 volatile float   g_vmot        = 0.0f;
 volatile float   g_vgen        = 0.0f;
-volatile int16_t g_speed       = 0;
+volatile int16_t g_speed       = 0;     // pulses / second
+volatile float   g_rpm         = 0.0f; // revolutions / minute
 volatile bool    g_newSample   = false;
 
 // ── Pulse counter — written by GPIO ISR, consumed by timer task ───────────────
@@ -115,10 +119,14 @@ static void onSampleTimer(void* /*arg*/) {
   const float   vgenAvg  = vgenSum  / filled;
   const int16_t speedAvg = static_cast<int16_t>(speedSum / filled);
 
+  // RPM from smoothed speed — encoder has 20 pulses per revolution
+  const float rpmAvg = static_cast<float>(speedAvg) * 60.0f / PULSES_PER_REV;
+
   portENTER_CRITICAL(&g_mux);
   g_vmot      = vmotAvg;
   g_vgen      = vgenAvg;
   g_speed     = speedAvg;
+  g_rpm       = rpmAvg;
   g_newSample = true;
   portEXIT_CRITICAL(&g_mux);
 }
@@ -152,7 +160,7 @@ void setup() {
   ESP_ERROR_CHECK(esp_timer_start_periodic(g_sampleTimer, SAMPLE_US));
 
   Serial.println("Ready — 100 Hz sampling started");
-  Serial.println("vmot (V)  | vgen (V)  | speed (pulse/s)");
+  Serial.println("speed (pulse/s) | rpm (RPM) | vmot (V) | vgen (V)");
 }
 
 void loop() {
@@ -166,17 +174,18 @@ void loop() {
   if (!newData) return;   // nothing new yet, come back later
 
   // Thread-safe snapshot of latest values
-  float   vmot;
-  float   vgen;
+  float   vmot, vgen, rpm;
   int16_t speed;
   portENTER_CRITICAL(&g_mux);
   vmot  = g_vmot;
   vgen  = g_vgen;
   speed = g_speed;
+  rpm   = g_rpm;
   portEXIT_CRITICAL(&g_mux);
 
   // Print at 100 Hz (throttle here if too fast for your terminal)
-  Serial.print(vmot,  3);  Serial.print(" V  |  ");
-  Serial.print(vgen,  3);  Serial.print(" V  |  ");
-  Serial.print(speed);     Serial.println(" pulse/s");
+  Serial.print(speed);    Serial.print(" pulse/s | ");
+  Serial.print(rpm, 1);   Serial.print(" RPM | ");
+  Serial.print(vmot, 3);  Serial.print(" V | ");
+  Serial.print(vgen, 3);  Serial.println(" V");
 }

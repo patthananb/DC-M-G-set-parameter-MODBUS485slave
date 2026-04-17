@@ -21,15 +21,21 @@ Piecewise linear, asymmetric around the zero-cross:
 
 ## Sampling
 - Rate: **100 Hz** (10 ms period) via `esp_timer` periodic timer
-- Speed stored as **pulses per second** (Hz); convert to RPM: `RPM = speed_Hz * 60 / pulses_per_rev`
-- 8-sample moving average applied to vmot, vgen, and speed
+- Speed stored as **pulses per second** (Hz); RPM calculated automatically using `PULSES_PER_REV = 20`
+- 8-sample moving average applied to vmot, vgen, and speed before RPM is derived
+
+## Encoder
+- **Spec**: 20 pulses per revolution (`PULSES_PER_REV = 20`)
+- **RPM formula**: `RPM = speed_Hz * 60.0f / PULSES_PER_REV`
+- RPM is computed inside `onSampleTimer()` from the already-smoothed `speedAvg`
 
 ## Modbus Registers (Holding, slave address 1)
-| Register | Content | Type                          |
-|----------|---------|-------------------------------|
-| 0        | speed   | int16 (pulses/s)              |
+| Register | Content | Type                              |
+|----------|---------|-----------------------------------|
+| 0        | speed   | int16 (pulses/s)                  |
 | 1–2      | vmot    | float32 (little-endian word swap) |
 | 3–4      | vgen    | float32 (little-endian word swap) |
+| 5–6      | rpm     | float32 (little-endian word swap) |
 
 ## Key Rules for AI Assistance
 - **Do NOT use** `timerBegin(num, prescaler, up)` — removed in Arduino core 3.x. Use `esp_timer`.
