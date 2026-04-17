@@ -1,4 +1,5 @@
 import argparse
+import time
 
 from pymodbus.client import ModbusSerialClient
 from serial.tools import list_ports
@@ -152,28 +153,33 @@ def main() -> None:
 
         print(f"Connected on {port}")
         try:
-            result = client.read_holding_registers(
-                address=START_ADDRESS,
-                count=REGISTER_COUNT,
-                device_id=SLAVE_ID,
-            )
-        except Exception as exc:
-            print(f"Read exception on {port}: {exc}")
-            client.close()
-            continue
+            while True:
+                try:
+                    result = client.read_holding_registers(
+                        address=START_ADDRESS,
+                        count=REGISTER_COUNT,
+                        device_id=SLAVE_ID,
+                    )
+                except Exception as exc:
+                    print(f"Read exception on {port}: {exc}")
+                    break
 
-        if result.isError():
-            print(f"Read failed on {port}: {result}")
-            client.close()
-            continue
+                if result.isError():
+                    print(f"Read failed on {port}: {result}")
+                    break
 
-        speed, v_mot, v_gen, rpm = decode_values(result.registers)
-        print(f"Speed: {speed} pulse/s")
-        print(f"RPM:   {rpm:.1f} RPM")
-        print(f"V_mot: {v_mot:.2f} V")
-        print(f"V_gen: {v_gen:.2f} V")
+                speed, v_mot, v_gen, rpm = decode_values(result.registers)
+                print(f"Speed: {speed} pulse/s")
+                print(f"RPM:   {rpm:.1f} RPM")
+                print(f"V_mot: {v_mot:.2f} V")
+                print(f"V_gen: {v_gen:.2f} V")
+                time.sleep(0.5)
+        except KeyboardInterrupt:
+            print("Stopped by user.")
+            client.close()
+            return
+
         client.close()
-        return
 
     print("No responding Modbus slave found on detected ports.")
 
