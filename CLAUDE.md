@@ -13,11 +13,11 @@ ESP32-C6 Modbus RTU slave that reads motor voltage (vmot), generator voltage (vg
 ## Voltage Mapping
 Piecewise linear, asymmetric around the zero-cross:
 
-| ADC voltage | Motor voltage |
-|-------------|---------------|
-| 1.45 V      | −12 V         |
+| ADC voltage | Motor voltage      |
+|-------------|--------------------|
+| 1.45 V      | −12 V              |
 | 1.65 V      |   0 V (zero-cross) |
-| 3.80 V      | +12 V         |
+| 3.80 V      | +12 V              |
 
 ## Sampling
 - Rate: **100 Hz** (10 ms period) via `esp_timer` periodic timer
@@ -25,9 +25,9 @@ Piecewise linear, asymmetric around the zero-cross:
 - 8-sample moving average applied to vmot, vgen, and speed
 
 ## Modbus Registers (Holding, slave address 1)
-| Register | Content | Type |
-|----------|---------|------|
-| 0        | speed   | int16 (pulses/s) |
+| Register | Content | Type                          |
+|----------|---------|-------------------------------|
+| 0        | speed   | int16 (pulses/s)              |
 | 1–2      | vmot    | float32 (little-endian word swap) |
 | 3–4      | vgen    | float32 (little-endian word swap) |
 
@@ -37,13 +37,31 @@ Piecewise linear, asymmetric around the zero-cross:
 - ADC attenuation must be set via `analogSetPinAttenuation(pin, ADC_11db)`.
 - All shared state between the timer task and `loop()` must be protected with `portMUX_TYPE` / `portENTER_CRITICAL`.
 - Speed ISR must use `portENTER_CRITICAL_ISR`, timer task code uses `portENTER_CRITICAL`.
+- `analogReadMilliVolts()` is safe to call from `ESP_TIMER_TASK` context (task, not ISR).
 
 ## File Layout
 ```
-nano_slave/
-  esp32slave.ino        # Modbus RTU slave, setup/loop
-  read_paramters.ino    # ADC + speed sampling, 100 Hz timer
+esp32slave_combined/
+  esp32slave_combined.ino   # RECOMMENDED — single-file Modbus slave
+                            # Sampling + Modbus in one self-contained sketch
+
+esp32slave/
+  esp32slave.ino            # Modbus RTU slave: setup/loop + Modbus polling
+  read_paramters.ino        # Sampling helper: 100 Hz timer, ISR, MA filter
+                            # (no setup/loop — works together with esp32slave.ino)
+
+dc_motor_reader/
+  dc_motor_reader.ino       # Standalone: sampling + Serial output, no Modbus
+                            # Use for hardware validation without RS-485
+
 python485master/
-  read_rs485.py         # Python Modbus master
+  read_rs485.py             # Python Modbus master
   requirements.txt
 ```
+
+## Sketch Selection Guide
+| Goal | Open this sketch |
+|------|-----------------|
+| Deploy full Modbus slave (simplest) | `esp32slave_combined/` |
+| Keep sampling and transport in separate files | `esp32slave/` |
+| Test ADC + speed sensor without Modbus | `dc_motor_reader/` |
