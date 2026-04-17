@@ -12,7 +12,7 @@ TIMEOUT = 1
 
 SLAVE_ID = 1
 START_ADDRESS = 0
-REGISTER_COUNT = 5
+REGISTER_COUNT = 7
 
 
 def create_client(port: str) -> ModbusSerialClient:
@@ -74,11 +74,12 @@ def get_candidate_ports() -> list[str]:
     return ordered_candidates
 
 
-def decode_values(registers: list[int]) -> tuple[int, float, float]:
-    # Match dc_motor_read.ino mapping:
-    # register 0 -> int16 speed
-    # registers 1-2 -> float32 vmot (little word order)
-    # registers 3-4 -> float32 v_gen (little word order)
+def decode_values(registers: list[int]) -> tuple[int, float, float, float]:
+    # Holding register map (esp32slave_combined):
+    # [0]   -> int16  speed  (pulses / second)
+    # [1-2] -> float32 vmot  (little word order)
+    # [3-4] -> float32 vgen  (little word order)
+    # [5-6] -> float32 rpm   (little word order)
     speed = ModbusSerialClient.convert_from_registers(
         [registers[0]],
         data_type=ModbusSerialClient.DATATYPE.INT16,
@@ -93,7 +94,12 @@ def decode_values(registers: list[int]) -> tuple[int, float, float]:
         data_type=ModbusSerialClient.DATATYPE.FLOAT32,
         word_order="little",
     )
-    return speed, v_mot, v_gen
+    rpm = ModbusSerialClient.convert_from_registers(
+        registers[5:7],
+        data_type=ModbusSerialClient.DATATYPE.FLOAT32,
+        word_order="little",
+    )
+    return speed, v_mot, v_gen, rpm
 
 
 def select_ports(ports: list[str], requested_port: str | None) -> list[str]:
@@ -161,10 +167,11 @@ def main() -> None:
             client.close()
             continue
 
-        speed, v_mot, v_gen = decode_values(result.registers)
-        print(f"Speed: {speed}")
-        print(f"V_mot: {v_mot:.2f}")
-        print(f"V_gen: {v_gen:.2f}")
+        speed, v_mot, v_gen, rpm = decode_values(result.registers)
+        print(f"Speed: {speed} pulse/s")
+        print(f"RPM:   {rpm:.1f} RPM")
+        print(f"V_mot: {v_mot:.2f} V")
+        print(f"V_gen: {v_gen:.2f} V")
         client.close()
         return
 
