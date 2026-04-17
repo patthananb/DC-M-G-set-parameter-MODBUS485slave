@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Modbus RS-485 Master",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["read_rs485.py"],
+      "cwd": "python485master",
+      "port": 0
+    }
+  ]
+}
