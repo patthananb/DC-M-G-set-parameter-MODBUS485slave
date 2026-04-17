@@ -1,33 +1,83 @@
 # DC Motor Reading
 
-ESP32-C6 firmware that samples motor voltage, generator voltage, and motor speed at 100 Hz and exposes the values over RS-485 Modbus RTU. A companion Python script acts as the Modbus master.
+ESP32-C6 firmware that samples motor voltage, generator voltage, and motor speed
+at 100 Hz, calculates RPM, and exposes all values over RS-485 Modbus RTU.
+A companion Python script acts as the Modbus master.
+
+---
+
+## Project Layout
+
+```
+DC_Motor_Reading/
+├── modbus_slave/
+│   └── modbus_slave.ino        ← Full Modbus RTU slave (single file) ★ use this
+│
+├── serial_monitor/
+│   └── serial_monitor.ino      ← Standalone test: prints values to USB Serial
+│
+├── esp32slave/                 ← Two-file reference implementation
+│   ├── esp32slave.ino
+│   └── read_paramters.ino
+│
+└── python485master/
+    ├── modbus_master.py        ← Python Modbus master (reads all registers)
+    └── requirements.txt
+```
+
+---
 
 ## Hardware Connections
 
-| Signal    | GPIO | Notes                                             |
-|-----------|------|---------------------------------------------------|
-| vmot      | 4    | ADC1_CH4 — sensor output 1.45–3.80 V             |
-| vgen      | 5    | ADC1_CH5 — sensor output 1.45–3.80 V             |
-| speed     | 14   | Digital pulse input (encoder / hall / tachometer) |
-| RS-485 TX | 6    | UART1                                             |
-| RS-485 RX | 7    | UART1                                             |
+| Signal       | GPIO | Notes                                              |
+|--------------|------|----------------------------------------------------|
+| vmot         | 4    | ADC1_CH4 — sensor output 1.45–3.80 V              |
+| vgen         | 5    | ADC1_CH5 — sensor output 1.45–3.80 V              |
+| speed input  | 14   | Digital pulse input (encoder / hall / tachometer)  |
+| RS-485 TX    | 6    | UART1                                              |
+| RS-485 RX    | 7    | UART1                                              |
+| sim output   | 20   | Pulse simulator output — jumper to GPIO14 to test  |
 
-> **Note:** GPIO14 is a digital-only pin on ESP32-C6. Motor speed is measured by
-> counting rising edges per 10 ms window (×100 = pulses/second).
-> Convert to RPM: `RPM = speed_Hz × 60 / pulses_per_revolution`
+> **GPIO14 is digital-only** on ESP32-C6 (not an ADC pin). Speed is measured
+> by counting rising edges per 10 ms window × 100 = pulses/second.
+
+---
 
 ## Voltage Mapping
 
-The analog sensors produce a biased output centred at 1.65 V. The firmware maps
-this piecewise-linearly to motor voltage:
+Analog sensors produce a DC-biased output. The firmware maps piecewise-linearly
+to real motor voltage:
 
 ```
-1.45 V  →  −12 V
-1.65 V  →    0 V  (zero-cross)
-3.80 V  →  +12 V
+ADC voltage   Motor voltage
+──────────    ─────────────
+  1.45 V  →    −12 V
+  1.65 V  →      0 V   (zero-cross / DC bias)
+  3.80 V  →    +12 V
 ```
 
-Both channels use 11 dB ADC attenuation to cover the full 0–3.9 V input range.
+Both ADC channels use 11 dB attenuation (`ADC_11db`) to cover the 0–3.9 V range.
+
+---
+
+## RPM Calculation
+
+Encoder spec: **20 pulses per revolution**
+
+```
+RPM = speed_Hz × 60 / 20
+```
+
+RPM is derived inside the 100 Hz timer callback from the 8-sample moving-average
+speed, so it inherits the same smoothing as the raw pulse count.
+
+**Pulse simulator (for bench testing):**
+GPIO20 outputs a hardware 1000 Hz square wave via LEDC (zero CPU overhead).
+→ Expected reading: **1000 pulse/s → 3000 RPM**
+To use: connect GPIO20 to GPIO14 with a jumper wire.
+To disable: comment out the two `ledcAttach` / `ledcWrite` lines in `setup()`.
+
+---
 
 ## Modbus RTU Configuration
 
@@ -36,62 +86,66 @@ Both channels use 11 dB ADC attenuation to cover the full 0–3.9 V input range.
 | Slave address | 1     |
 | Baud rate     | 9600  |
 | Framing       | 8-N-1 |
+| UART          | UART1 — TX=GPIO6, RX=GPIO7 |
 
 ### Holding Registers
 
-| Address | Signal | Type                                  |
-|---------|--------|---------------------------------------|
-| 0       | speed  | INT16 — pulses/second                 |
-| 1–2     | vmot   | FLOAT32 (two 16-bit words, low first) |
-| 3–4     | vgen   | FLOAT32 (two 16-bit words, low first) |
-| 5–6     | rpm    | FLOAT32 (two 16-bit words, low first) |
+| Address | Signal | Type    | Unit            |
+|---------|--------|---------|-----------------|
+| 0       | speed  | INT16   | pulses / second |
+| 1–2     | vmot   | FLOAT32 | volts           |
+| 3–4     | vgen   | FLOAT32 | volts           |
+| 5–6     | rpm    | FLOAT32 | RPM             |
 
-> **RPM calculation:** encoder has 20 pulses/revolution.
-> `RPM = speed_Hz × 60 / 20` applied to the 8-sample moving-average speed.
+All FLOAT32 values use **little-endian word order** (low word at lower address).
 
-## Arduino Sketches
-
-Three sketches are provided — pick whichever suits your use case:
-
-### `esp32slave_combined/` ← **recommended for most users**
-Single self-contained `.ino` file. Combines parameter sampling and Modbus RTU
-transmission in one place — no dependencies between files. Open this sketch to
-build the full Modbus slave in one step.
-
-### `esp32slave/`
-Two-file version of the same Modbus slave:
-- `esp32slave.ino` — `setup()`, `loop()`, and Modbus polling
-- `read_paramters.ino` — 100 Hz sampling helper (timer, ISR, MA filter)
-
-Useful if you want to keep the sampling and transport layers separate.
-
-### `dc_motor_reader/`
-Standalone sketch with no Modbus dependency. Prints vmot, vgen, and speed over
-USB Serial at 100 Hz. Use this for quick hardware validation without RS-485.
+---
 
 ## Sampling Architecture
 
-- **Timer**: IDF `esp_timer` periodic, 10 000 µs period → 100 Hz
-- **ADC**: `analogReadMilliVolts()` called inside the timer task (not in ISR)
-- **Speed**: GPIO interrupt counts rising edges; timer task snapshots and resets the counter each tick
-- **Filtering**: 8-sample moving average on all three signals
-- **Thread safety**: `portMUX_TYPE` spinlocks guard ISR ↔ timer-task and timer-task ↔ loop() access
+| Component | Detail |
+|-----------|--------|
+| Timer | `esp_timer` periodic, 10 000 µs → 100 Hz |
+| ADC reads | `analogReadMilliVolts()` inside timer task (safe, not ISR) |
+| Speed | GPIO14 ISR counts rising edges; timer task snapshots + resets each tick |
+| Filter | 8-sample moving average on vmot, vgen, and speed |
+| Thread safety | `portMUX_TYPE` spinlocks: ISR ↔ timer-task, timer-task ↔ loop() |
 
-## Building
+---
 
-1. Open the sketch folder in Arduino IDE (File → Open → select the `.ino` file).
-2. Select board **ESP32C6 Dev Module**.
-3. Install the [ModbusRTUSlave](https://github.com/CMB27/ModbusRTUSlave) library
-   *(not required for `dc_motor_reader`)*.
+## Which Sketch to Open
+
+| Goal | Sketch |
+|------|--------|
+| Deploy full Modbus slave — simplest | `modbus_slave/modbus_slave.ino` ★ |
+| Test ADC + speed without RS-485 | `serial_monitor/serial_monitor.ino` |
+| Two-file reference (sampling separate from Modbus) | `esp32slave/esp32slave.ino` |
+
+### Building
+
+1. **Arduino IDE** → File → Open → select the `.ino` inside the sketch folder.
+2. Board: **ESP32C6 Dev Module**
+3. Install [ModbusRTUSlave](https://github.com/CMB27/ModbusRTUSlave) library
+   *(not needed for `serial_monitor`)*.
 4. Upload.
+
+---
 
 ## Python Master
 
 ```bash
 cd python485master
 pip install -r requirements.txt
-python read_rs485.py
+python modbus_master.py
 ```
 
-Auto-detects USB-RS485 adapters and reads speed, vmot, and vgen from the slave.
-Pass `--port /dev/cu.usbserial-XXXX` to skip port selection.
+Auto-detects USB-RS485 adapters and reads speed, RPM, vmot, and vgen.
+Pass `--port /dev/cu.usbserial-XXXX` to skip the port selection prompt.
+
+**Output:**
+```
+Speed: 1000 pulse/s
+RPM:   3000.0 RPM
+V_mot: 3.25 V
+V_gen: 1.82 V
+```

@@ -4,7 +4,7 @@
     {
       "name": "Modbus RS-485 Master",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["read_rs485.py"],
+      "runtimeArgs": ["modbus_master.py"],
       "cwd": "python485master",
       "port": 0
     }
