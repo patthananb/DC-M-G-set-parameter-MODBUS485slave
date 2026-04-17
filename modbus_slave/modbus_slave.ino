@@ -69,6 +69,8 @@ uint16_t       holdingRegisters[7];  // [0]=speed, [1-2]=vmot, [3-4]=vgen, [5-6]
 static portMUX_TYPE g_mux    = portMUX_INITIALIZER_UNLOCKED;
 volatile float   g_vmot      = 0.0f;
 volatile float   g_vgen      = 0.0f;
+volatile float   g_vmotRaw   = 0.0f;  // raw ADC volts (before mapping)
+volatile float   g_vgenRaw   = 0.0f;  // raw ADC volts (before mapping)
 volatile int16_t g_speed     = 0;     // pulses / second
 volatile float   g_rpm       = 0.0f; // revolutions / minute
 volatile bool    g_newSample = false;
@@ -159,6 +161,8 @@ static void onSampleTimer(void* /*arg*/) {
   portENTER_CRITICAL(&g_mux);
   g_vmot      = vmotAvg;
   g_vgen      = vgenAvg;
+  g_vmotRaw   = vmotV;    // save latest raw ADC reading
+  g_vgenRaw   = vgenV;
   g_speed     = speedAvg;
   g_rpm       = rpmAvg;
   g_newSample = true;
@@ -201,7 +205,7 @@ void setup() {
   modbus.configureHoldingRegisters(holdingRegisters, 7);
 
   Serial.println("ESP32-C6 Modbus slave ready — address 1, 9600 baud");
-  Serial.println("speed (pulse/s) | rpm (RPM) | vmot (V) | vgen (V)");
+  Serial.println("speed (pulse/s) | rpm (RPM) | vmot (V) | vgen (V) | vmot_raw (V) | vgen_raw (V)");
 }
 
 void loop() {
@@ -213,12 +217,14 @@ void loop() {
 
   // ── Thread-safe snapshot of latest measurements ───────────────────────────
   int16_t speed;
-  float   vmot, vgen, rpm;
+  float   vmot, vgen, rpm, vmotRaw, vgenRaw;
   portENTER_CRITICAL(&g_mux);
-  speed = g_speed;
-  vmot  = g_vmot;
-  vgen  = g_vgen;
-  rpm   = g_rpm;
+  speed    = g_speed;
+  vmot     = g_vmot;
+  vgen     = g_vgen;
+  rpm      = g_rpm;
+  vmotRaw  = g_vmotRaw;
+  vgenRaw  = g_vgenRaw;
   portEXIT_CRITICAL(&g_mux);
 
   // ── Pack into Modbus holding registers ───────────────────────────────────
@@ -232,9 +238,11 @@ void loop() {
 
   // ── Serial debug — printed once per 10 ms tick (100 Hz) ──────────────────
   if (newData) {
-    Serial.print(speed);    Serial.print(" pulse/s | ");
-    Serial.print(rpm, 1);   Serial.print(" RPM | ");
-    Serial.print(vmot, 3);  Serial.print(" V | ");
-    Serial.print(vgen, 3);  Serial.println(" V");
+    Serial.print(speed);       Serial.print(" pulse/s | ");
+    Serial.print(rpm, 1);      Serial.print(" RPM | ");
+    Serial.print(vmot, 3);     Serial.print(" V | ");
+    Serial.print(vgen, 3);     Serial.print(" V | ");
+    Serial.print(vmotRaw, 3);  Serial.print(" V raw | ");
+    Serial.print(vgenRaw, 3);  Serial.println(" V raw");
   }
 }
