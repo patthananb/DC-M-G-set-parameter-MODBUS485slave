@@ -7,9 +7,9 @@
 // GPIO14 : speed (digital pulse input, rising-edge count per 10 ms window)
 //
 // Voltage mapping (piecewise linear around zero-cross):
-//   1.45 V → -12 V motor voltage
+//   0.45 V → -12 V motor voltage
 //   1.65 V →   0 V motor voltage  (zero-cross)
-//   3.80 V → +12 V motor voltage
+//   2.85 V → +12 V motor voltage
 //
 // g_speed unit: pulses per second (Hz).  Convert to RPM:
 //   RPM = g_speed * 60 / pulses_per_revolution
@@ -25,8 +25,8 @@ constexpr uint32_t SAMPLE_HZ = 100;
 constexpr uint32_t SAMPLE_US = 1000000UL / SAMPLE_HZ;   // 10 000 µs
 
 constexpr float   ZERO_CROSS_V = 1.65f;
-constexpr float   MAX_SENSOR_V = 3.80f;
-constexpr float   MIN_SENSOR_V = 1.45f;
+constexpr float   MAX_SENSOR_V = 2.85f;
+constexpr float   MIN_SENSOR_V = 0.45f;
 constexpr float   MOTOR_V_MAX  = 12.0f;
 constexpr uint8_t MA_WINDOW    = 8;
 

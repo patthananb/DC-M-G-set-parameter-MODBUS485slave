@@ -31,8 +31,8 @@ DC_Motor_Reading/
 
 | Signal       | GPIO | Notes                                              |
 |--------------|------|----------------------------------------------------|
-| vmot         | 4    | ADC1_CH4 — sensor output 1.45–3.80 V              |
-| vgen         | 5    | ADC1_CH5 — sensor output 1.45–3.80 V              |
+| vmot         | 4    | ADC1_CH4 — sensor output 0.45–2.85 V              |
+| vgen         | 5    | ADC1_CH5 — sensor output 0.45–2.85 V              |
 | speed input  | 14   | Digital pulse input (encoder / hall / tachometer)  |
 | RS-485 TX    | 6    | UART1                                              |
 | RS-485 RX    | 7    | UART1                                              |
@@ -51,9 +51,9 @@ to real motor voltage:
 ```
 ADC voltage   Motor voltage
 ──────────    ─────────────
-  1.45 V  →    −12 V
+  0.45 V  →    −12 V
   1.65 V  →      0 V   (zero-cross / DC bias)
-  3.80 V  →    +12 V
+  2.85 V  →    +12 V
 ```
 
 Both ADC channels use 11 dB attenuation (`ADC_11db`) to cover the 0–3.9 V range.

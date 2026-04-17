@@ -18,9 +18,9 @@ Piecewise linear, asymmetric around the zero-cross:
 
 | ADC voltage | Motor voltage      |
 |-------------|--------------------|
-| 1.45 V      | −12 V              |
+| 0.45 V      | −12 V              |
 | 1.65 V      |   0 V (zero-cross) |
-| 3.80 V      | +12 V              |
+| 2.85 V      | +12 V              |
 
 ## Sampling
 - Rate: **100 Hz** (10 ms period) via `esp_timer` periodic timer
