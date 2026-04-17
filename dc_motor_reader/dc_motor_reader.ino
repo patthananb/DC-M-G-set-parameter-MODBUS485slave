@@ -3,6 +3,8 @@
 //  GPIO4  : vmot  (ADC1_CH4, 11 dB attenuation → ~0–3.9 V)
 //  GPIO5  : vgen  (ADC1_CH5, 11 dB attenuation → ~0–3.9 V)
 //  GPIO14 : speed (digital pulse input, rising-edge counting)
+//  GPIO20 : simulator output — 1000 Hz square wave → 3000 RPM
+//           *** connect GPIO20 to GPIO14 with a jumper to test ***
 //
 //  Voltage mapping (piecewise linear around zero-cross):
 //    1.45 V → -12 V motor voltage
@@ -32,7 +34,11 @@ constexpr float   MOTOR_V_MAX  = 12.0f;
 constexpr uint8_t MA_WINDOW    = 8;
 
 // ── Encoder ───────────────────────────────────────────────────────────────────
-constexpr uint8_t PULSES_PER_REV = 20;  // encoder resolution
+constexpr uint8_t  PULSES_PER_REV = 20;    // encoder resolution
+
+// ── Pulse simulator (connect GPIO20 → GPIO14 with a jumper to test) ──────────
+constexpr uint8_t  SIM_PIN        = 20;    // simulator output pin
+constexpr uint32_t SIM_PULSE_HZ   = 1000; // 1000 pulse/s = 3000 RPM
 
 // ── Shared measurement state — written by timer task, read by loop() ──────────
 static portMUX_TYPE g_mux      = portMUX_INITIALIZER_UNLOCKED;
@@ -147,6 +153,12 @@ void setup() {
   // GPIO14: digital pulse input (encoder / tachometer / hall sensor)
   pinMode(SPEED_PIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(SPEED_PIN), onSpeedPulse, RISING);
+
+  // ── Pulse simulator: 1000 Hz square wave on GPIO20 → 3000 RPM ───────────
+  // LEDC (PWM) generates the signal in hardware — zero CPU overhead.
+  // Remove or comment out these two lines when a real encoder is connected.
+  ledcAttach(SIM_PIN, SIM_PULSE_HZ, 8);  // 1000 Hz, 8-bit resolution
+  ledcWrite(SIM_PIN, 128);               // 50% duty cycle
 
   // Start 100 Hz periodic timer via esp_timer (Arduino core 3.x compatible)
   esp_timer_create_args_t args = {};
