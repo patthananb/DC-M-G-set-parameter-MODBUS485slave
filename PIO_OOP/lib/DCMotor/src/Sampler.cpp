@@ -32,8 +32,8 @@ void Sampler::onTimer() {
   pulseCount_ = 0;
   portEXIT_CRITICAL(&pulseMux_);
 
-  const float vmotMV = VoltageMap::toMotor(vmotV);
-  const float vgenMV = VoltageMap::toMotor(vgenV);
+  const float vmotMV = adcToMotor(vmotV);
+  const float vgenMV = adcToMotor(vgenV);
 
   const uint32_t rawHz   = pulses * SAMPLE_HZ;
   const int16_t  speedHz = (rawHz > (uint32_t)INT16_MAX)

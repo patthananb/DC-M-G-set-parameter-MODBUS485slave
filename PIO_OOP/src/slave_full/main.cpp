@@ -5,6 +5,7 @@
 
 #include <Arduino.h>
 #include "Config.h"
+#include "Debug.h"
 #include "Sampler.h"
 #include "PulseSimulator.h"
 #include "ModbusServer.h"
@@ -15,14 +16,14 @@ dcmotor::PulseSimulator simulator;
 dcmotor::ModbusServer   slave(RS485Serial);
 
 void setup() {
-  Serial.begin(115200);
+  Serial0.begin(115200);
 
   simulator.begin();
   sampler.begin();
   slave.begin();   // addr=1, 9600 baud, 7 regs
 
-  Serial.println("ESP32-C6 Modbus slave ready — address 1, 9600 baud");
-  Serial.println("speed (pulse/s) | rpm (RPM) | vmot (V) | vgen (V) | vmot_raw (V) | vgen_raw (V)");
+  dcmotor::dbg->printf("ESP32-C6 Modbus slave ready — address 1, 9600 baud\n");
+  dcmotor::dbg->printf("speed (pulse/s) | rpm (RPM) | vmot (V) | vgen (V) | vmot_raw (V) | vgen_raw (V)\n");
 }
 
 void loop() {
@@ -34,11 +35,7 @@ void loop() {
   slave.poll();
 
   if (fresh) {
-    Serial.print(m.speed);       Serial.print(" pulse/s | ");
-    Serial.print(m.rpm, 1);      Serial.print(" RPM | ");
-    Serial.print(m.vmot, 3);     Serial.print(" V | ");
-    Serial.print(m.vgen, 3);     Serial.print(" V | ");
-    Serial.print(m.vmotRaw, 3);  Serial.print(" V raw | ");
-    Serial.print(m.vgenRaw, 3);  Serial.println(" V raw");
+    dcmotor::dbg->printf("%d pulse/s | %.1f RPM | %.3f V | %.3f V | %.3f V raw | %.3f V raw\n",
+                         m.speed, m.rpm, m.vmot, m.vgen, m.vmotRaw, m.vgenRaw);
   }
 }

@@ -3,7 +3,7 @@
 
 namespace dcmotor {
 
-float VoltageMap::toMotor(float v) {
+float adcToMotor(float v) {
   using namespace config;
   float motorV;
   if (v >= ZERO_CROSS_V) {

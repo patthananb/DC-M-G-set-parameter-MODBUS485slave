@@ -85,6 +85,31 @@ holding registers using the same `memcpy` layout as the original
 `modbus_slave.ino` so `python485master/modbus_master.py` reads it
 without any wire-level changes.
 
+`dcmotor::adcToMotor(float)` is a free function (not a struct) — pure
+piecewise-linear math, no state, no need for a class wrapper.
+
+## Debug output
+
+All sketches print debug via a shared `HardwareSerial*` pointer in
+[`lib/DCMotor/src/Debug.h`](lib/DCMotor/src/Debug.h):
+
+```cpp
+namespace dcmotor {
+extern HardwareSerial* dbg;   // defined in Debug.cpp as &Serial0
+}
+```
+
+Sketches call `Serial0.begin(115200)` in `setup()` then use `printf`-style
+formatting at every print site:
+
+```cpp
+dcmotor::dbg->printf("speed=%d, vmot=%.3f V\n", m.speed, m.vmot);
+```
+
+`Serial0` is UART0 on the ESP32-C6, routed through the on-board USB-UART
+bridge (not the native USB-CDC port — that one is `Serial`). Reassign
+`dcmotor::dbg` in `setup()` if you need a different sink.
+
 ## Hardware (unchanged from parent project)
 
 - ESP32-C6 dev board, GPIO4=vmot, GPIO5=vgen, GPIO14=speed, GPIO6/7=RS-485,
@@ -136,9 +161,9 @@ Totals: flash 1 310 720 B, RAM 327 680 B (DRAM heap reported by linker).
 
 | Env          | Flash (used / total)   | Flash %  | RAM (used / total)  | RAM %   |
 |--------------|------------------------|----------|---------------------|---------|
-| `monitor`    | 279 643 / 1 310 720 B  | 21.3 %   | 14 392 / 327 680 B  | 4.4 %   |
-| `slave_full` | 304 459 / 1 310 720 B  | 23.2 %   | 15 496 / 327 680 B  | 4.7 %   |
-| `slave_ref`  | 304 167 / 1 310 720 B  | 23.2 %   | 15 496 / 327 680 B  | 4.7 %   |
+| `monitor`    | 278 885 / 1 310 720 B  | 21.3 %   | 14 392 / 327 680 B  | 4.4 %   |
+| `slave_full` | 303 683 / 1 310 720 B  | 23.2 %   | 15 496 / 327 680 B  | 4.7 %   |
+| `slave_ref`  | 303 397 / 1 310 720 B  | 23.1 %   | 15 496 / 327 680 B  | 4.7 %   |
 
 Reproduce:
 

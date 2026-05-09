@@ -5,6 +5,7 @@
 
 #include <Arduino.h>
 #include "Config.h"
+#include "Debug.h"
 #include "Sampler.h"
 #include "PulseSimulator.h"
 
@@ -12,22 +13,19 @@ dcmotor::Sampler        sampler;
 dcmotor::PulseSimulator simulator;
 
 void setup() {
-  Serial.begin(115200);
-  while (!Serial) delay(10);
+  Serial0.begin(115200);
 
   simulator.begin();   // 1000 Hz on GPIO20 — jumper to GPIO14
   sampler.begin();
 
-  Serial.println("Ready — 100 Hz sampling started");
-  Serial.println("speed (pulse/s) | rpm (RPM) | vmot (V) | vgen (V)");
+  dcmotor::dbg->printf("Ready — 100 Hz sampling started\n");
+  dcmotor::dbg->printf("speed (pulse/s) | rpm (RPM) | vmot (V) | vgen (V)\n");
 }
 
 void loop() {
   dcmotor::Measurements m;
   if (!sampler.readIfNew(m)) return;
 
-  Serial.print(m.speed);    Serial.print(" pulse/s | ");
-  Serial.print(m.rpm, 1);   Serial.print(" RPM | ");
-  Serial.print(m.vmot, 3);  Serial.print(" V | ");
-  Serial.print(m.vgen, 3);  Serial.println(" V");
+  dcmotor::dbg->printf("%d pulse/s | %.1f RPM | %.3f V | %.3f V\n",
+                       m.speed, m.rpm, m.vmot, m.vgen);
 }
