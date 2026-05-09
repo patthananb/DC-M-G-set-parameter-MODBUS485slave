@@ -90,25 +90,36 @@ piecewise-linear math, no state, no need for a class wrapper.
 
 ## Debug output
 
-All sketches print debug via a shared `HardwareSerial*` pointer in
+All sketches print debug via a global `Print*` pointer declared in
 [`lib/DCMotor/src/Debug.h`](lib/DCMotor/src/Debug.h):
 
 ```cpp
-namespace dcmotor {
-extern HardwareSerial* dbg;   // defined in Debug.cpp as &Serial0
-}
+extern Print* dbg;   // defined in Debug.cpp as &Serial
 ```
 
-Sketches call `Serial0.begin(115200)` in `setup()` then use `printf`-style
+The pointer is **global** (not in `namespace dcmotor`) so call sites stay
+short. Type is `Print*` so the same pointer can hold any `Print`-derived
+sink (`HWCDC`, `HardwareSerial`, `USBCDC`, custom subclass).
+
+Sketches call `Serial.begin(115200)` in `setup()` then use `printf`-style
 formatting at every print site:
 
 ```cpp
-dcmotor::dbg->printf("speed=%d, vmot=%.3f V\n", m.speed, m.vmot);
+dbg->printf("speed=%d, vmot=%.3f V\n", m.speed, m.vmot);
 ```
 
-`Serial0` is UART0 on the ESP32-C6, routed through the on-board USB-UART
-bridge (not the native USB-CDC port — that one is `Serial`). Reassign
-`dcmotor::dbg` in `setup()` if you need a different sink.
+`Serial` is mapped to the ESP32-C6's native **USB-Serial-JTAG** (HWCDC)
+peripheral by two build flags in [`platformio.ini`](platformio.ini):
+
+```ini
+build_flags =
+  -DARDUINO_USB_MODE=1          # select HWCDC (not TinyUSB USBCDC)
+  -DARDUINO_USB_CDC_ON_BOOT=1   # bind Serial to the HWCDC instance
+```
+
+Plug the host PC into the **USB-C** connector labelled "USB" (not "UART")
+on the ESP32-C6-DevKitC-1 to see debug output. To redirect to the
+USB-UART bridge instead, reassign `dbg = &Serial0;` in `setup()`.
 
 ## Hardware (unchanged from parent project)
 
@@ -161,9 +172,13 @@ Totals: flash 1 310 720 B, RAM 327 680 B (DRAM heap reported by linker).
 
 | Env          | Flash (used / total)   | Flash %  | RAM (used / total)  | RAM %   |
 |--------------|------------------------|----------|---------------------|---------|
-| `monitor`    | 278 885 / 1 310 720 B  | 21.3 %   | 14 392 / 327 680 B  | 4.4 %   |
-| `slave_full` | 303 683 / 1 310 720 B  | 23.2 %   | 15 496 / 327 680 B  | 4.7 %   |
-| `slave_ref`  | 303 397 / 1 310 720 B  | 23.1 %   | 15 496 / 327 680 B  | 4.7 %   |
+| `monitor`    | 292 403 / 1 310 720 B  | 22.3 %   | 15 208 / 327 680 B  | 4.6 %   |
+| `slave_full` | 308 791 / 1 310 720 B  | 23.6 %   | 15 608 / 327 680 B  | 4.8 %   |
+| `slave_ref`  | 308 513 / 1 310 720 B  | 23.5 %   | 15 608 / 327 680 B  | 4.8 %   |
+
+The USB-CDC stack (HWCDC + linker-pulled USB peripheral driver) accounts
+for the ~13 KB flash / ~800 B RAM increase over the previous Serial0-based
+build.
 
 Reproduce:
 

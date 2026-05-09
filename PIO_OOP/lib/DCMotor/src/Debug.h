@@ -2,15 +2,17 @@
 
 #include <Arduino.h>
 
-namespace dcmotor {
-
-// Debug sink. Default points to Serial0 (hardware UART0 on ESP32-C6, the
-// USB-UART bridge on the devkit). Reassign in setup() if you want to send
-// debug output somewhere else (e.g. &Serial for the USB-CDC interface, or
-// nullptr to mute — caller must guard the calls in that case).
+// Global debug sink. Default points to Serial — on the ESP32-C6 with
+// ARDUINO_USB_CDC_ON_BOOT=1 (set in platformio.ini), Serial is the native
+// USB-Serial-JTAG (HWCDC) class. Type is Print* so the same pointer can
+// hold any concrete sink (HWCDC, HardwareSerial, USBCDC, custom Print).
+//
+// To redirect, reassign in setup() — for example to send debug out of the
+// on-board USB-UART bridge instead:
+//     dbg = &Serial0;
+//
+// To mute, assign nullptr (caller must guard the calls in that case).
 //
 // Usage:
-//     dcmotor::dbg->printf("speed=%d rpm=%.1f\n", m.speed, m.rpm);
-extern HardwareSerial* dbg;
-
-}  // namespace dcmotor
+//     dbg->printf("speed=%d rpm=%.1f\n", m.speed, m.rpm);
+extern Print* dbg;

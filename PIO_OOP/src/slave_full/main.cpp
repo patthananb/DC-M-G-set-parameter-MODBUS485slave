@@ -16,14 +16,14 @@ dcmotor::PulseSimulator simulator;
 dcmotor::ModbusServer   slave(RS485Serial);
 
 void setup() {
-  Serial0.begin(115200);
+  Serial.begin(115200);
 
   simulator.begin();
   sampler.begin();
   slave.begin();   // addr=1, 9600 baud, 7 regs
 
-  dcmotor::dbg->printf("ESP32-C6 Modbus slave ready — address 1, 9600 baud\n");
-  dcmotor::dbg->printf("speed (pulse/s) | rpm (RPM) | vmot (V) | vgen (V) | vmot_raw (V) | vgen_raw (V)\n");
+  dbg->printf("ESP32-C6 Modbus slave ready — address 1, 9600 baud\n");
+  dbg->printf("speed (pulse/s) | rpm (RPM) | vmot (V) | vgen (V) | vmot_raw (V) | vgen_raw (V)\n");
 }
 
 void loop() {
@@ -35,7 +35,7 @@ void loop() {
   slave.poll();
 
   if (fresh) {
-    dcmotor::dbg->printf("%d pulse/s | %.1f RPM | %.3f V | %.3f V | %.3f V raw | %.3f V raw\n",
+    dbg->printf("%d pulse/s | %.1f RPM | %.3f V | %.3f V | %.3f V raw | %.3f V raw\n",
                          m.speed, m.rpm, m.vmot, m.vgen, m.vmotRaw, m.vgenRaw);
   }
 }

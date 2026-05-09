@@ -16,7 +16,7 @@ dcmotor::PulseSimulator simulator;
 dcmotor::ModbusServer   slave(RS485Serial);
 
 void setup() {
-  Serial0.begin(115200);
+  Serial.begin(115200);
 
   simulator.begin();
   sampler.begin();
@@ -32,7 +32,7 @@ void loop() {
   slave.poll();
 
   if (fresh) {
-    dcmotor::dbg->printf("speed=%d, vmot=%.3f V, vgen=%.3f V\n",
+    dbg->printf("speed=%d, vmot=%.3f V, vgen=%.3f V\n",
                          m.speed, m.vmot, m.vgen);
   }
 }

@@ -13,19 +13,20 @@ dcmotor::Sampler        sampler;
 dcmotor::PulseSimulator simulator;
 
 void setup() {
-  Serial0.begin(115200);
+  Serial.begin(115200);
+  while (!Serial) delay(10);   // wait for USB-CDC host
 
   simulator.begin();   // 1000 Hz on GPIO20 — jumper to GPIO14
   sampler.begin();
 
-  dcmotor::dbg->printf("Ready — 100 Hz sampling started\n");
-  dcmotor::dbg->printf("speed (pulse/s) | rpm (RPM) | vmot (V) | vgen (V)\n");
+  dbg->printf("Ready — 100 Hz sampling started\n");
+  dbg->printf("speed (pulse/s) | rpm (RPM) | vmot (V) | vgen (V)\n");
 }
 
 void loop() {
   dcmotor::Measurements m;
   if (!sampler.readIfNew(m)) return;
 
-  dcmotor::dbg->printf("%d pulse/s | %.1f RPM | %.3f V | %.3f V\n",
+  dbg->printf("%d pulse/s | %.1f RPM | %.3f V | %.3f V\n",
                        m.speed, m.rpm, m.vmot, m.vgen);
 }
