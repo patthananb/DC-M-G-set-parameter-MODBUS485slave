@@ -8,27 +8,27 @@
 #include <Arduino.h>
 #include "Config.h"
 #include "Debug.h"
-#include "DCMotorMeasuring.h"
+#include "MotorMeasurement.h"
 #include "ModbusRTU.h"
 
-namespace measure = config::dcmotormeasurement;
+namespace motor  = config::motor;
 namespace modbus  = config::modbus;
 
 HardwareSerial          RS485Serial(1);
-measure::DCMotorMeasuring motor;
+motor::MotorMeasurement motorReader;
 modbus::ModbusRTU slave(RS485Serial);
 
 void setup() {
   Serial.begin(config::settings::DEBUG_BAUD);
 
-  motor.begin();
+  motorReader.begin();
   slave.begin();
 }
 
 void loop() {
-  measure::Measurements m;
-  const bool fresh = motor.readIfNew(m);
-  if (!fresh) motor.readLatest(m);
+  motor::Measurements m;
+  const bool fresh = motorReader.readIfNew(m);
+  if (!fresh) motorReader.readLatest(m);
 
   slave.update(m);
   slave.poll();

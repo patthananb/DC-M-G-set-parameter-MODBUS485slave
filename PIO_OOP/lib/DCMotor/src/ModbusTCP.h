@@ -7,11 +7,11 @@
 #include <Arduino.h>
 #include <Network.h>
 #include <WiFi.h>
-#include "Measurements.h"
+#include "MotorMeasurement.h"
 
 namespace config { namespace modbus {
 
-using dcmotormeasurement::Measurements;
+using motor::Measurements;
 
 struct ModbusTCP {
 public:

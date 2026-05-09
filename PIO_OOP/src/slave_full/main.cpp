@@ -6,11 +6,11 @@
 #include <Arduino.h>
 #include "Config.h"
 #include "Debug.h"
-#include "DCMotorMeasuring.h"
+#include "MotorMeasurement.h"
 #include "ModbusRTU.h"
 
 HardwareSerial          RS485Serial(1);
-config::dcmotormeasurement::DCMotorMeasuring motor;
+config::motor::MotorMeasurement motor;
 config::modbus::ModbusRTU slave(RS485Serial);
 
 void setup() {
@@ -26,7 +26,7 @@ void setup() {
 }
 
 void loop() {
-  config::dcmotormeasurement::Measurements m;
+  config::motor::Measurements m;
   const bool fresh = motor.readIfNew(m);
   if (!fresh) motor.readLatest(m);
 

@@ -6,10 +6,10 @@
 #include <Arduino.h>
 #include "Config.h"
 #include "Debug.h"
-#include "DCMotorMeasuring.h"
+#include "MotorMeasurement.h"
 #include "ModbusTCP.h"
 
-config::dcmotormeasurement::DCMotorMeasuring motor;
+config::motor::MotorMeasurement motor;
 config::modbus::ModbusTCP slave;
 
 void setup() {
@@ -31,7 +31,7 @@ void setup() {
 }
 
 void loop() {
-  config::dcmotormeasurement::Measurements m;
+  config::motor::Measurements m;
   const bool fresh = motor.readIfNew(m);
   if (!fresh) motor.readLatest(m);
 

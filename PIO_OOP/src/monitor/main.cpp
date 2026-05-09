@@ -6,9 +6,9 @@
 #include <Arduino.h>
 #include "Config.h"
 #include "Debug.h"
-#include "DCMotorMeasuring.h"
+#include "MotorMeasurement.h"
 
-config::dcmotormeasurement::DCMotorMeasuring motor;
+config::motor::MotorMeasurement motor;
 
 void setup() {
   Serial.begin(config::settings::DEBUG_BAUD);
@@ -22,7 +22,7 @@ void setup() {
 }
 
 void loop() {
-  config::dcmotormeasurement::Measurements m;
+  config::motor::Measurements m;
   if (!motor.readIfNew(m)) return;
 
   dbg->printf("%d pulse/s | %.1f RPM | %.3f V | %.3f V\n",

@@ -2,11 +2,11 @@
 
 #include <Arduino.h>
 #include "Config.h"
-#include "Measurements.h"
+#include "MotorMeasurement.h"
 
 namespace config { namespace modbus {
 
-using dcmotormeasurement::Measurements;
+using motor::Measurements;
 
 void writeMeasurementsToHoldingRegisters(uint16_t* regs,
                                          uint8_t regCount,

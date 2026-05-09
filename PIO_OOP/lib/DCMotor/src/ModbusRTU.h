@@ -3,11 +3,11 @@
 #include <Arduino.h>
 #include <ModbusRTUSlave.h>
 #include "Config.h"
-#include "Measurements.h"
+#include "MotorMeasurement.h"
 
 namespace config { namespace modbus {
 
-using dcmotormeasurement::Measurements;
+using motor::Measurements;
 
 // Wrapper around ModbusRTUSlave that holds the holding-register array
 // and packs Measurements into the wire layout used by the Python master:
