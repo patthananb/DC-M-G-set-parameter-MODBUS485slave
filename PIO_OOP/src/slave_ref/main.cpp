@@ -3,6 +3,8 @@
 // terse serial debug output, mirroring the original esp32slave/ sketch.
 // 1000 Hz pulse simulator on GPIO20 — jumper to GPIO14 for bench testing.
 
+// this is also a example of "using namespace" to avoid having to prefix everything with dcmotor::
+
 #include <Arduino.h>
 #include "Config.h"
 #include "Debug.h"
@@ -10,10 +12,12 @@
 #include "PulseSimulator.h"
 #include "ModbusServer.h"
 
+using namespace dcmotor;
+
 HardwareSerial          RS485Serial(1);
-dcmotor::Sampler        sampler;
-dcmotor::PulseSimulator simulator;
-dcmotor::ModbusServer   slave(RS485Serial);
+Sampler        sampler;
+PulseSimulator simulator;
+ModbusServer   slave(RS485Serial);
 
 void setup() {
   Serial.begin(115200);
@@ -24,7 +28,7 @@ void setup() {
 }
 
 void loop() {
-  dcmotor::Measurements m;
+Measurements m;
   const bool fresh = sampler.readIfNew(m);
   if (!fresh) sampler.readLatest(m);
 
