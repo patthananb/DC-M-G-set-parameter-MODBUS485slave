@@ -1,6 +1,6 @@
 #pragma once
 
-namespace dcmotor {
+namespace config { namespace dcmotormeasurement {
 
 // Convert a raw ADC voltage to a motor voltage using the piecewise-linear
 // mapping defined in Config.h:
@@ -11,4 +11,5 @@ namespace dcmotor {
 // Result is clamped to ±MOTOR_V_MAX.
 float adcToMotor(float adcV);
 
-}  // namespace dcmotor
+}  // namespace dcmotormeasurement
+}  // namespace config

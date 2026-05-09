@@ -6,30 +6,29 @@
 #include <Arduino.h>
 #include "Config.h"
 #include "Debug.h"
-#include "Sampler.h"
-#include "PulseSimulator.h"
-#include "ModbusServer.h"
+#include "DCMotorMeasuring.h"
+#include "ModbusRTU.h"
 
 HardwareSerial          RS485Serial(1);
-dcmotor::Sampler        sampler;
-dcmotor::PulseSimulator simulator;
-dcmotor::ModbusServer   slave(RS485Serial);
+config::dcmotormeasurement::DCMotorMeasuring motor;
+config::modbus::ModbusRTU slave(RS485Serial);
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(config::settings::DEBUG_BAUD);
 
-  simulator.begin();
-  sampler.begin();
-  slave.begin();   // addr=1, 9600 baud, 7 regs
+  motor.begin();
+  slave.begin();
 
-  dbg->printf("ESP32-C6 Modbus slave ready — address 1, 9600 baud\n");
+  dbg->printf("ESP32-C6 Modbus slave ready — address %u, %lu baud\n",
+              config::settings::MODBUS_ADDR,
+              static_cast<unsigned long>(config::settings::MODBUS_BAUD));
   dbg->printf("speed (pulse/s) | rpm (RPM) | vmot (V) | vgen (V) | vmot_raw (V) | vgen_raw (V)\n");
 }
 
 void loop() {
-  dcmotor::Measurements m;
-  const bool fresh = sampler.readIfNew(m);
-  if (!fresh) sampler.readLatest(m);
+  config::dcmotormeasurement::Measurements m;
+  const bool fresh = motor.readIfNew(m);
+  if (!fresh) motor.readLatest(m);
 
   slave.update(m);
   slave.poll();

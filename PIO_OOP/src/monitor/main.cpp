@@ -6,26 +6,24 @@
 #include <Arduino.h>
 #include "Config.h"
 #include "Debug.h"
-#include "Sampler.h"
-#include "PulseSimulator.h"
+#include "DCMotorMeasuring.h"
 
-dcmotor::Sampler        sampler;
-dcmotor::PulseSimulator simulator;
+config::dcmotormeasurement::DCMotorMeasuring motor;
 
 void setup() {
-  Serial.begin(115200);
-  while (!Serial) delay(10);   // wait for USB-CDC host
+  Serial.begin(config::settings::DEBUG_BAUD);
+  while (!Serial) delay(config::settings::USB_SERIAL_WAIT_MS);   // wait for USB-CDC host
 
-  simulator.begin();   // 1000 Hz on GPIO20 — jumper to GPIO14
-  sampler.begin();
+  motor.begin();   // 1000 Hz on GPIO20 — jumper to GPIO14
 
-  dbg->printf("Ready — 100 Hz sampling started\n");
+  dbg->printf("Ready — %lu Hz sampling started\n",
+              static_cast<unsigned long>(config::settings::SAMPLE_HZ));
   dbg->printf("speed (pulse/s) | rpm (RPM) | vmot (V) | vgen (V)\n");
 }
 
 void loop() {
-  dcmotor::Measurements m;
-  if (!sampler.readIfNew(m)) return;
+  config::dcmotormeasurement::Measurements m;
+  if (!motor.readIfNew(m)) return;
 
   dbg->printf("%d pulse/s | %.1f RPM | %.3f V | %.3f V\n",
                        m.speed, m.rpm, m.vmot, m.vgen);

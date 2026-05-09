@@ -1,7 +1,7 @@
 {
   "name": "DCMotor",
   "version": "0.1.0",
-  "description": "ESP32-C6 motor sampling, voltage mapping, pulse simulator, and Modbus RTU slave wrapper. Struct + namespace OOP.",
+  "description": "ESP32-C6 motor measurement, voltage mapping, pulse simulator, Modbus RTU, and Modbus TCP wrappers under config namespaces.",
   "frameworks": "arduino",
   "platforms": "espressif32",
   "dependencies": {

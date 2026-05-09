@@ -1,6 +1,6 @@
 #include "PulseSimulator.h"
 
-namespace dcmotor {
+namespace config { namespace dcmotormeasurement {
 
 void PulseSimulator::begin(uint8_t pin, uint32_t hz, uint8_t resolutionBits, uint8_t dutyOf255) {
   pin_ = pin;
@@ -16,4 +16,5 @@ void PulseSimulator::stop() {
   }
 }
 
-}  // namespace dcmotor
+}  // namespace dcmotormeasurement
+}  // namespace config

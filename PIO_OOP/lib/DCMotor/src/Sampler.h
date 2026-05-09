@@ -3,17 +3,9 @@
 #include <Arduino.h>
 #include "esp_timer.h"
 #include "Config.h"
+#include "Measurements.h"
 
-namespace dcmotor {
-
-struct Measurements {
-  int16_t speed    = 0;     // pulses/s, 8-sample MA
-  float   vmot     = 0.0f;  // motor V, 8-sample MA
-  float   vgen     = 0.0f;  // motor V, 8-sample MA
-  float   rpm      = 0.0f;  // speed * 60 / PULSES_PER_REV
-  float   vmotRaw  = 0.0f;  // latest raw ADC V
-  float   vgenRaw  = 0.0f;
-};
+namespace config { namespace dcmotormeasurement {
 
 // 100 Hz ADC + pulse sampler with 8-sample moving average.
 // Single-instance: ISR + esp_timer trampolines bind to the first instance
@@ -41,9 +33,9 @@ private:
   volatile bool newSample_ = false;
 
   // MA filter state — owned by onTimer()
-  float   vmotBuf_[config::MA_WINDOW]  = {};
-  float   vgenBuf_[config::MA_WINDOW]  = {};
-  int16_t speedBuf_[config::MA_WINDOW] = {};
+  float   vmotBuf_[settings::MA_WINDOW]  = {};
+  float   vgenBuf_[settings::MA_WINDOW]  = {};
+  int16_t speedBuf_[settings::MA_WINDOW] = {};
   float   vmotSum_  = 0.0f;
   float   vgenSum_  = 0.0f;
   int32_t speedSum_ = 0;
@@ -51,4 +43,5 @@ private:
   uint8_t filled_   = 0;
 };
 
-}  // namespace dcmotor
+}  // namespace dcmotormeasurement
+}  // namespace config

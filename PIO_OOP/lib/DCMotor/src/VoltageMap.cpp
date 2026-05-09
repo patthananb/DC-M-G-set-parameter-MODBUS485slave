@@ -1,10 +1,10 @@
 #include "VoltageMap.h"
 #include "Config.h"
 
-namespace dcmotor {
+namespace config { namespace dcmotormeasurement {
 
 float adcToMotor(float v) {
-  using namespace config;
+  using namespace settings;
   float motorV;
   if (v >= ZERO_CROSS_V) {
     motorV = ((v - ZERO_CROSS_V) / (MAX_SENSOR_V - ZERO_CROSS_V)) * MOTOR_V_MAX;
@@ -16,4 +16,5 @@ float adcToMotor(float v) {
   return motorV;
 }
 
-}  // namespace dcmotor
+}  // namespace dcmotormeasurement
+}  // namespace config

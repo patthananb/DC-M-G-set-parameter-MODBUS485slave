@@ -1,7 +1,7 @@
 #include "Sampler.h"
 #include "VoltageMap.h"
 
-namespace dcmotor {
+namespace config { namespace dcmotormeasurement {
 
 namespace {
 Sampler* s_instance = nullptr;
@@ -22,10 +22,10 @@ void Sampler::onPulse() {
 }
 
 void Sampler::onTimer() {
-  using namespace config;
+  using namespace settings;
 
-  const float vmotV = analogReadMilliVolts(VMOT_PIN) / 1000.0f;
-  const float vgenV = analogReadMilliVolts(VGEN_PIN) / 1000.0f;
+  const float vmotV = analogReadMilliVolts(VMOT_PIN) / MILLIVOLTS_PER_VOLT;
+  const float vgenV = analogReadMilliVolts(VGEN_PIN) / MILLIVOLTS_PER_VOLT;
 
   portENTER_CRITICAL(&pulseMux_);
   const uint32_t pulses = pulseCount_;
@@ -72,11 +72,11 @@ void Sampler::onTimer() {
 }
 
 void Sampler::begin() {
-  using namespace config;
+  using namespace settings;
 
   s_instance = this;
 
-  analogReadResolution(12);
+  analogReadResolution(ADC_RESOLUTION_BITS);
   analogSetPinAttenuation(VMOT_PIN, ADC_11db);
   analogSetPinAttenuation(VGEN_PIN, ADC_11db);
 
@@ -111,4 +111,5 @@ void Sampler::readLatest(Measurements& out) {
   portEXIT_CRITICAL(&stateMux_);
 }
 
-}  // namespace dcmotor
+}  // namespace dcmotormeasurement
+}  // namespace config

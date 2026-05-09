@@ -3,15 +3,15 @@
 #include <Arduino.h>
 #include "Config.h"
 
-namespace dcmotor {
+namespace config { namespace dcmotormeasurement {
 
 // LEDC hardware PWM square wave for bench testing.
 // Jumper SIM_PIN -> SPEED_PIN to feed simulated pulses into the Sampler.
 struct PulseSimulator {
-  void begin(uint8_t pin = config::SIM_PIN,
-             uint32_t hz = config::SIM_PULSE_HZ,
-             uint8_t resolutionBits = 8,
-             uint8_t dutyOf255 = 128);
+  void begin(uint8_t pin = settings::SIM_PIN,
+             uint32_t hz = settings::SIM_PULSE_HZ,
+             uint8_t resolutionBits = settings::SIM_LEDC_BITS,
+             uint8_t dutyOf255 = settings::SIM_LEDC_DUTY);
   void stop();
 
 private:
@@ -19,4 +19,5 @@ private:
   bool    attached_  = false;
 };
 
-}  // namespace dcmotor
+}  // namespace dcmotormeasurement
+}  // namespace config
